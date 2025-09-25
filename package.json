@@ -8,7 +8,6 @@
   },
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'No build step required'",
     "start": "echo 'This is a serverless project'"
   },
   "keywords": [
