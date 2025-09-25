@@ -6,9 +6,6 @@
       "maxDuration": 30
     }
   },
-  "env": {
-    "BAILIAN_API_KEY": "@bailian-api-key"
-  },
   "headers": [
     {
       "source": "/api/(.*)",
