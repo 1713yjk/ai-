@@ -4,7 +4,7 @@
   "description": "AI代理服务，为AZ Rings智能戒指健康评估系统提供百炼AI接口",
   "main": "index.js",
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vercel dev",
