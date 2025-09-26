@@ -68,8 +68,7 @@ export default async function handler(req, res) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${API_KEY}`,
-                'Content-Type': 'application/json',
-                'X-DashScope-Async': 'false'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(bailianRequest)
         });
