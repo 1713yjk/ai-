@@ -43,31 +43,28 @@ export default async function handler(req, res) {
         console.log(`[AI Chat] 收到对话历史: ${messages.length} 条消息`);
         console.log(`[AI Chat] 最新消息: ${messages[messages.length - 1]?.content?.substring(0, 50)}...`);
         
-        // 从环境变量获取API密钥（更安全）
+        // 从环境变量获取API密钥和应用ID
         const API_KEY = process.env.BAILIAN_API_KEY || 'sk-9c3ff6da6d7a4278adb0906afb7bf556';
+        const APP_ID = process.env.BAILIAN_APP_ID || '25169679aff34de39aa146e63db8aaeb';
         
-        // 构建百炼API请求（支持多轮对话）
+        // 构建百炼应用API请求（使用您配置的应用，包含内置提示词）
         const bailianRequest = {
-            model: 'qwen-plus', // 使用 qwen-plus 获得更好的对话质量
             input: {
                 messages: messages.map(msg => ({
                     role: msg.role,
                     content: msg.content
                 }))
             },
-            parameters: {
-                temperature: 0.7,
-                top_p: 0.8,
-                max_tokens: 2000,
-                result_format: 'message' // 使用message格式便于解析
-            }
+            parameters: {},
+            debug: {}
         };
         
-        console.log('[AI Chat] 开始调用百炼API...');
-        console.log(`[AI Chat] 使用模型: ${bailianRequest.model}`);
+        console.log('[AI Chat] 开始调用百炼应用API...');
+        console.log(`[AI Chat] 应用ID: ${APP_ID}`);
+        console.log(`[AI Chat] 对话轮次: ${messages.length}`);
         
-        // 调用百炼API
-        const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', {
+        // 调用百炼应用API（会使用应用配置的提示词）
+        const response = await fetch(`https://dashscope.aliyuncs.com/api/v1/apps/${APP_ID}/completion`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${API_KEY}`,
@@ -91,12 +88,12 @@ export default async function handler(req, res) {
             });
         }
         
-        // 解析百炼API响应
+        // 解析百炼应用API响应
         const bailianResponse = await response.json();
         
-        // 提取AI回复内容
-        const aiContent = bailianResponse.output?.choices?.[0]?.message?.content || 
-                         bailianResponse.output?.text || 
+        // 提取AI回复内容（百炼应用API格式）
+        const aiContent = bailianResponse.output?.text || 
+                         bailianResponse.output?.choices?.[0]?.message?.content || 
                          '';
         
         if (!aiContent) {
@@ -106,11 +103,12 @@ export default async function handler(req, res) {
             return res.status(500).json({
                 success: false,
                 error: 'Invalid response',
-                message: '百炼API响应格式异常'
+                message: '百炼应用API响应格式异常'
             });
         }
         
-        console.log(`[AI Chat] 百炼API调用成功，返回内容长度: ${aiContent.length} 字符`);
+        console.log(`[AI Chat] 百炼应用API调用成功，返回内容长度: ${aiContent.length} 字符`);
+        console.log('[AI Chat] ✅ 已使用您配置的应用提示词');
         
         // 返回标准格式响应（兼容小程序端的多种格式）
         return res.status(200).json({
@@ -118,7 +116,7 @@ export default async function handler(req, res) {
             data: {
                 content: aiContent,
                 usage: bailianResponse.usage || {},
-                model: bailianRequest.model
+                model: 'bailian-app'
             },
             // 额外兼容字段
             content: aiContent,
