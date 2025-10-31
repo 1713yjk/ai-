@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "ali-oss": "^6.18.0",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "busboy": "^1.6.0"
   },
   "devDependencies": {}
 }
