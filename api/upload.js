@@ -3,6 +3,7 @@
 
 const OSS = require('ali-oss');
 const { v4: uuidv4 } = require('uuid');
+const Busboy = require('busboy');
 
 // 禁用Vercel的body解析，我们需要手动处理
 export const config = {
@@ -120,74 +121,76 @@ export default async function handler(req, res) {
 }
 
 /**
- * 解析multipart/form-data格式的文件
+ * 使用busboy解析multipart/form-data格式的文件
  * @param {Object} req - 请求对象
  * @returns {Promise<Object>} { file: Buffer, filename: string, mimeType: string }
  */
 async function parseMultipartForm(req) {
   return new Promise((resolve, reject) => {
-    const chunks = [];
-    let totalSize = 0;
+    const busboy = Busboy({ headers: req.headers });
     
-    req.on('data', (chunk) => {
-      chunks.push(chunk);
-      totalSize += chunk.length;
+    let fileBuffer = null;
+    let filename = null;
+    let mimeType = null;
+    let formData = {};
+    
+    // 监听文件字段
+    busboy.on('file', (fieldname, file, info) => {
+      filename = info.filename || 'unnamed';
+      mimeType = info.mimeType || 'application/octet-stream';
       
-      // 防止过大的请求
-      if (totalSize > MAX_FILE_SIZE * 2) {
-        req.connection.destroy();
-        reject(new Error('文件大小超过限制'));
-      }
-    });
-    
-    req.on('end', () => {
-      try {
-        const buffer = Buffer.concat(chunks);
-        const contentType = req.headers['content-type'] || '';
+      const chunks = [];
+      let fileSize = 0;
+      
+      file.on('data', (chunk) => {
+        chunks.push(chunk);
+        fileSize += chunk.length;
         
-        // 提取boundary
-        const boundaryMatch = contentType.match(/boundary=(.+)$/);
-        if (!boundaryMatch) {
-          throw new Error('Invalid Content-Type: no boundary');
+        // 检查文件大小
+        if (fileSize > MAX_FILE_SIZE) {
+          file.resume(); // 丢弃剩余数据
+          reject(new Error(`文件大小超过限制（最大${MAX_FILE_SIZE / 1024 / 1024}MB）`));
         }
-        
-        const boundary = '--' + boundaryMatch[1];
-        const parts = buffer.toString('binary').split(boundary);
-        
-        // 查找文件部分
-        for (const part of parts) {
-          if (part.includes('Content-Disposition: form-data') && part.includes('filename=')) {
-            // 提取文件名
-            const filenameMatch = part.match(/filename="(.+?)"/);
-            const filename = filenameMatch ? filenameMatch[1] : 'unnamed';
-            
-            // 提取MIME类型
-            const mimeMatch = part.match(/Content-Type: (.+?)\r\n/);
-            const mimeType = mimeMatch ? mimeMatch[1].trim() : 'application/octet-stream';
-            
-            // 提取文件数据
-            const dataStart = part.indexOf('\r\n\r\n') + 4;
-            const dataEnd = part.lastIndexOf('\r\n');
-            
-            if (dataStart > 3 && dataEnd > dataStart) {
-              const fileData = part.substring(dataStart, dataEnd);
-              const file = Buffer.from(fileData, 'binary');
-              
-              resolve({ file, filename, mimeType });
-              return;
-            }
-          }
+      });
+      
+      file.on('end', () => {
+        if (fileSize <= MAX_FILE_SIZE) {
+          fileBuffer = Buffer.concat(chunks);
         }
-        
-        reject(new Error('未找到文件数据'));
-      } catch (error) {
+      });
+      
+      file.on('error', (error) => {
         reject(error);
-      }
+      });
     });
     
-    req.on('error', (error) => {
+    // 监听普通表单字段
+    busboy.on('field', (fieldname, value) => {
+      formData[fieldname] = value;
+    });
+    
+    // 解析完成
+    busboy.on('finish', () => {
+      if (!fileBuffer) {
+        reject(new Error('未找到文件数据'));
+        return;
+      }
+      
+      // 如果formData中有filename，优先使用（小程序传的）
+      if (formData.filename) {
+        filename = formData.filename;
+      }
+      
+      resolve({ file: fileBuffer, filename, mimeType });
+    });
+    
+    // 错误处理
+    busboy.on('error', (error) => {
       reject(error);
     });
+    
+    // 将请求流传入busboy
+    req.pipe(busboy);
   });
 }
 
