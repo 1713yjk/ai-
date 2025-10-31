@@ -4,6 +4,13 @@
   "functions": {
     "api/bailian.js": {
       "maxDuration": 30
+    },
+    "api/chat.js": {
+      "maxDuration": 60
+    },
+    "api/upload.js": {
+      "maxDuration": 30,
+      "memory": 1024
     }
   },
   "headers": [
