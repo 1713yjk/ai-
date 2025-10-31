@@ -12,13 +12,12 @@ function buildMessageContent(message) {
         return message.content;
     }
     
-    // 如果有附件，构建多模态content数组
+    // 如果有附件，构建多模态content数组（百炼API格式）
     const contentArray = [];
     
     // 添加文本内容（如果有）
     if (message.content && message.content.trim()) {
         contentArray.push({
-            type: 'text',
             text: message.content
         });
     }
@@ -26,14 +25,13 @@ function buildMessageContent(message) {
     // 添加附件内容
     message.attachments.forEach(attachment => {
         if (attachment.category === 'image') {
+            // 百炼API格式：直接使用image字段
             contentArray.push({
-                type: 'image_url',
-                image_url: attachment.url
+                image: attachment.url
             });
         } else if (attachment.category === 'document') {
             // 文档类型：添加提示文本
             contentArray.push({
-                type: 'text',
                 text: `[用户上传了文档: ${attachment.filename}]`
             });
         }
