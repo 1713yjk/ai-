@@ -4,6 +4,13 @@
 const OSS = require('ali-oss');
 const { v4: uuidv4 } = require('uuid');
 
+// 禁用Vercel的body解析，我们需要手动处理
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 // 环境变量
 const OSS_REGION = process.env.OSS_REGION || 'oss-cn-hangzhou';
 const OSS_BUCKET = process.env.OSS_BUCKET || 'azlg-website1';
