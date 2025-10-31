@@ -1,6 +1,47 @@
 // Vercel API Route for AI Chat
 // 处理小程序AI对话请求，支持多轮对话
 
+/**
+ * 构建消息内容（支持多模态）
+ * @param {Object} message - 消息对象
+ * @returns {String|Array} 文本内容或多模态内容数组
+ */
+function buildMessageContent(message) {
+    // 如果消息没有附件，返回纯文本
+    if (!message.attachments || message.attachments.length === 0) {
+        return message.content;
+    }
+    
+    // 如果有附件，构建多模态content数组
+    const contentArray = [];
+    
+    // 添加文本内容（如果有）
+    if (message.content && message.content.trim()) {
+        contentArray.push({
+            type: 'text',
+            text: message.content
+        });
+    }
+    
+    // 添加附件内容
+    message.attachments.forEach(attachment => {
+        if (attachment.category === 'image') {
+            contentArray.push({
+                type: 'image_url',
+                image_url: attachment.url
+            });
+        } else if (attachment.category === 'document') {
+            // 文档类型：添加提示文本
+            contentArray.push({
+                type: 'text',
+                text: `[用户上传了文档: ${attachment.filename}]`
+            });
+        }
+    });
+    
+    return contentArray;
+}
+
 export default async function handler(req, res) {
     console.log(`[${new Date().toISOString()}] 收到AI对话请求: ${req.method} ${req.url}`);
     
@@ -28,7 +69,7 @@ export default async function handler(req, res) {
     
     try {
         // 提取请求体中的messages参数
-        const { messages, stream = false } = req.body;
+        const { messages, stream = false, hasAttachments = false } = req.body;
         
         // 参数验证
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -52,7 +93,7 @@ export default async function handler(req, res) {
             input: {
                 messages: messages.map(msg => ({
                     role: msg.role,
-                    content: msg.content
+                    content: buildMessageContent(msg)
                 }))
             },
             parameters: {},
@@ -62,6 +103,12 @@ export default async function handler(req, res) {
         console.log('[AI Chat] 开始调用百炼应用API...');
         console.log(`[AI Chat] 应用ID: ${APP_ID}`);
         console.log(`[AI Chat] 对话轮次: ${messages.length}`);
+        console.log(`[AI Chat] 包含附件: ${hasAttachments}`);
+        if (hasAttachments) {
+            const attachmentCount = messages.reduce((count, msg) => 
+                count + (msg.attachments?.length || 0), 0);
+            console.log(`[AI Chat] 附件总数: ${attachmentCount}`);
+        }
         
         // 调用百炼应用API（会使用应用配置的提示词）
         const response = await fetch(`https://dashscope.aliyuncs.com/api/v1/apps/${APP_ID}/completion`, {
