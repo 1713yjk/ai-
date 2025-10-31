@@ -12,12 +12,13 @@ function buildMessageContent(message) {
         return message.content;
     }
     
-    // 如果有附件，构建多模态content数组（百炼API格式）
+    // 如果有附件，构建多模态content数组（OpenAI兼容格式）
     const contentArray = [];
     
     // 添加文本内容（如果有）
     if (message.content && message.content.trim()) {
         contentArray.push({
+            type: 'text',
             text: message.content
         });
     }
@@ -25,13 +26,17 @@ function buildMessageContent(message) {
     // 添加附件内容
     message.attachments.forEach(attachment => {
         if (attachment.category === 'image') {
-            // 百炼API格式：直接使用image字段
+            // OpenAI兼容格式：使用type和image_url
             contentArray.push({
-                image: attachment.url
+                type: 'image_url',
+                image_url: {
+                    url: attachment.url
+                }
             });
         } else if (attachment.category === 'document') {
             // 文档类型：添加提示文本
             contentArray.push({
+                type: 'text',
                 text: `[用户上传了文档: ${attachment.filename}]`
             });
         }
@@ -106,6 +111,7 @@ export default async function handler(req, res) {
             const attachmentCount = messages.reduce((count, msg) => 
                 count + (msg.attachments?.length || 0), 0);
             console.log(`[AI Chat] 附件总数: ${attachmentCount}`);
+            console.log('[AI Chat] 完整请求体:', JSON.stringify(bailianRequest, null, 2));
         }
         
         // 调用百炼应用API（会使用应用配置的提示词）
@@ -123,7 +129,8 @@ export default async function handler(req, res) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[AI Chat] 百炼API错误: ${response.status} - ${errorText}`);
+            console.error(`[AI Chat] 百炼API错误: ${response.status}`);
+            console.error(`[AI Chat] 错误详情:`, errorText);
             
             return res.status(response.status).json({
                 success: false,
