@@ -1,53 +1,6 @@
 // Vercel API Route for AI Chat
 // 处理小程序AI对话请求，支持多轮对话
-<<<<<<< HEAD
 // 使用阿里云百炼应用API（支持图片识别）
-=======
-
-/**
- * 构建消息内容（支持多模态）
- * @param {Object} message - 消息对象
- * @returns {String|Array} 文本内容或多模态内容数组
- */
-function buildMessageContent(message) {
-    // 如果消息没有附件，返回纯文本
-    if (!message.attachments || message.attachments.length === 0) {
-        return message.content;
-    }
-    
-    // 如果有附件，构建多模态content数组（OpenAI兼容格式）
-    const contentArray = [];
-    
-    // 添加文本内容（如果有）
-    if (message.content && message.content.trim()) {
-        contentArray.push({
-            type: 'text',
-            text: message.content
-        });
-    }
-    
-    // 添加附件内容
-    message.attachments.forEach(attachment => {
-        if (attachment.category === 'image') {
-            // OpenAI兼容格式：使用type和image_url
-            contentArray.push({
-                type: 'image_url',
-                image_url: {
-                    url: attachment.url
-                }
-            });
-        } else if (attachment.category === 'document') {
-            // 文档类型：添加提示文本
-            contentArray.push({
-                type: 'text',
-                text: `[用户上传了文档: ${attachment.filename}]`
-            });
-        }
-    });
-    
-    return contentArray;
-}
->>>>>>> 5ee5088dff79960d02ad76e3ecc85bfdf8ca8d8a
 
 export default async function handler(req, res) {
     console.log(`[${new Date().toISOString()}] 收到AI对话请求: ${req.method} ${req.url}`);
@@ -89,16 +42,11 @@ export default async function handler(req, res) {
         }
         
         console.log(`[AI Chat] 收到对话历史: ${messages.length} 条消息`);
-<<<<<<< HEAD
-=======
-        console.log(`[AI Chat] 最新消息: ${messages[messages.length - 1]?.content?.substring(0, 50)}...`);
->>>>>>> 5ee5088dff79960d02ad76e3ecc85bfdf8ca8d8a
         
         // 从环境变量获取API密钥和应用ID
         const API_KEY = process.env.BAILIAN_API_KEY || 'sk-9c3ff6da6d7a4278adb0906afb7bf556';
         const APP_ID = process.env.BAILIAN_APP_ID || '25169679aff34de39aa146e63db8aaeb';
         
-<<<<<<< HEAD
         // 提取最新消息（当前用户输入）
         const latestMessage = messages[messages.length - 1];
         
@@ -142,21 +90,10 @@ export default async function handler(req, res) {
         // 构建百炼应用API请求
         const bailianRequest = {
             input: input,
-=======
-        // 构建百炼应用API请求（使用您配置的应用，包含内置提示词）
-        const bailianRequest = {
-            input: {
-                messages: messages.map(msg => ({
-                    role: msg.role,
-                    content: buildMessageContent(msg)
-                }))
-            },
->>>>>>> 5ee5088dff79960d02ad76e3ecc85bfdf8ca8d8a
             parameters: {},
             debug: {}
         };
         
-<<<<<<< HEAD
         // 输出详细日志
         console.log('[AI Chat] 开始调用百炼应用API...');
         console.log(`[AI Chat] 应用ID: ${APP_ID}`);
@@ -170,17 +107,6 @@ export default async function handler(req, res) {
                 console.log(`  [${idx + 1}] ${url.substring(0, 100)}...`);
             });
             console.log('[AI Chat] 📋 完整请求体:', JSON.stringify(bailianRequest, null, 2));
-=======
-        console.log('[AI Chat] 开始调用百炼应用API...');
-        console.log(`[AI Chat] 应用ID: ${APP_ID}`);
-        console.log(`[AI Chat] 对话轮次: ${messages.length}`);
-        console.log(`[AI Chat] 包含附件: ${hasAttachments}`);
-        if (hasAttachments) {
-            const attachmentCount = messages.reduce((count, msg) => 
-                count + (msg.attachments?.length || 0), 0);
-            console.log(`[AI Chat] 附件总数: ${attachmentCount}`);
-            console.log('[AI Chat] 完整请求体:', JSON.stringify(bailianRequest, null, 2));
->>>>>>> 5ee5088dff79960d02ad76e3ecc85bfdf8ca8d8a
         }
         
         // 调用百炼应用API（会使用应用配置的提示词）
